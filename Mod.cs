@@ -1,5 +1,4 @@
 using HarmonyLib;
-using Il2CppScheduleOne;
 using Il2CppScheduleOne.Property;
 using Il2CppScheduleOne.UI;
 using Il2CppTMPro;
@@ -20,34 +19,46 @@ public class Mod : MelonMod
     public override void OnInitializeMelon() => Log("loaded");
 }
 
-// Milestone 1: log real business numbers + Mouth Wash's ID, add a placeholder "Upgrades" button.
+// Each business's laundering computer: record its base capacity, apply upgrades, add the "Upgrades" button + panel.
 [HarmonyPatch(typeof(LaunderingInterface), nameof(LaunderingInterface.Initialize))]
 static class LaunderingInterfaceInit
 {
     static void Postfix(LaunderingInterface __instance, Business bus)
     {
-        Mod.Log($"business {bus.PropertyCode} \"{bus.PropertyName}\": Price={bus.Price} LaunderCapacity={bus.LaunderCapacity}");
-        LogMouthWashOnce();
+        Effects.Register(bus, __instance);
+        if (!Trees.All.ContainsKey(bus.PropertyCode)) return; // only businesses with a tree get the button
 
+        var panel = new Panel(__instance, bus);
         var src = __instance.launderButton;
         var btn = Object.Instantiate(src.gameObject, src.transform.parent).GetComponent<Button>();
         btn.name = "BusinessUpgradesButton";
         var rt = btn.GetComponent<RectTransform>();
         rt.anchoredPosition += new Vector2(rt.rect.width * 1.1f, 0); // right of Launder (below it overlaps the operations panel)
         btn.onClick = new Button.ButtonClickedEvent(); // drop the cloned Launder listeners
-        btn.onClick.AddListener((UnityAction)(() => Mod.Log($"Upgrades clicked: {bus.PropertyName}")));
+        btn.onClick.AddListener((UnityAction)panel.Show);
         btn.interactable = true;
         var label = btn.GetComponentInChildren<TextMeshProUGUI>();
         if (label != null) label.text = "Upgrades";
     }
+}
 
-    static bool mouthWashLogged;
-    static void LogMouthWashOnce()
+// Opening the computer always starts on the laundering screen.
+[HarmonyPatch(typeof(LaunderingInterface), nameof(LaunderingInterface.Open))]
+static class LaunderingInterfaceOpen
+{
+    static void Postfix(LaunderingInterface __instance)
     {
-        if (mouthWashLogged) return;
-        mouthWashLogged = true;
-        foreach (var reg in Registry.Instance.ItemRegistry)
-            if ((reg.ID + " " + reg.name).ToLower().Contains("mouth"))
-                Mod.Log($"item: ID={reg.ID} name={reg.name}");
+        if (__instance.Business != null && Panel.ByBusiness.TryGetValue(__instance.Business.PropertyCode, out var p)) p.Hide();
+    }
+}
+
+// Laundering time: every operation (new or loaded from the save) gets the business's upgraded duration.
+[HarmonyPatch(typeof(Business), nameof(Business.MinsPass))]
+static class BusinessMinsPass
+{
+    static void Prefix(Business __instance)
+    {
+        int m = Effects.Minutes(__instance.PropertyCode);
+        foreach (var op in __instance.LaunderingOperations) op.completionTime_Minutes = m;
     }
 }
