@@ -13,15 +13,17 @@ namespace BusinessUpgrades;
 // Singleplayer = host with no lobby.
 static class Net
 {
-    const string StateKey = "BusinessUpgrades_state", CmdKey = "BusinessUpgrades_cmd";
+    const string StateKey = "BusinessUpgrades_state", CmdKey = "BusinessUpgrades_cmd", ProtoKey = "BusinessUpgrades_proto";
+    const string Proto = "1"; // bump when host and client can no longer understand each other
 
     static SteamNetworkClient steam;
     static bool Online => steam != null && steam.IsInLobby;
     /// A co-op client: in someone else's lobby and not the server. (FishNet alone isn't enough: while a save loads the
     /// host briefly reports IsServer false, and the host then overwrote its loaded list with the lobby's empty copy.)
     public static bool IsClient => Online && !steam.IsHost && !InstanceFinder.IsServer;
-    /// A co-op client can ask the host for anything (and should hand over items) only while it sees the host.
-    public static bool CanReachHost => Online && steam.GetHostMember() != null;
+    /// A co-op client can ask the host for anything (and should hand over items) only while it sees a host running the
+    /// same protocol, with no request already waiting (a host without the mod would take the goods and record nothing).
+    public static bool CanReachHost => Online && steam.GetHostMember() != null && steam.GetLobbyData(ProtoKey) == Proto && Pending == null;
 
     // --- setup: the library must start before the game joins a lobby (it watches Steam's lobby-entered event) ---
 
@@ -50,7 +52,7 @@ static class Net
     {
         if (!IsClient) return Trees.TryBuy(biz, id);
         if (Pending != null) return "Waiting for the host...";
-        if (!Online || steam.GetHostMember() == null) return "Not connected to the host";
+        if (!CanReachHost) return "Not connected to the host (or it runs another BusinessUpgrades version)";
         pendingCmd = Guid.NewGuid().ToString("N");
         Pending = biz + ":" + id; pendingAt = UnityEngine.Time.time;
         steam.SetMyData(CmdKey, $"{pendingCmd}|{biz}|{id}");
@@ -80,6 +82,7 @@ static class Net
     static void Publish()
     {
         string data = string.Join(",", Upgrades.Instance.Owned);
+        if (lastPublished == null) steam.SetLobbyData(ProtoKey, Proto); // new lobby
         if (data == lastPublished) return;
         lastPublished = data;
         steam.SetLobbyData(StateKey, data);
