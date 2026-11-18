@@ -35,17 +35,54 @@ static class Supply
         lastTime = now;
         if (!morning) return;
         foreach (var b in Business.Businesses)
-            if (b.IsOwned && Item.TryGetValue(b.PropertyCode, out var id) && PerDay(b.PropertyCode) is int n && n > 0) Produce(b, id, n);
+        {
+            if (!b.IsOwned) continue;
+            if (AutoLaunders(b.PropertyCode)) LaunderRackCash(b); // first: frees rack space for the supplies
+            if (Item.TryGetValue(b.PropertyCode, out var id) && PerDay(b.PropertyCode) is int n && n > 0) Produce(b, id, n);
+        }
+    }
+
+    static bool AutoLaunders(string biz)
+    {
+        if (Trees.All.TryGetValue(biz, out var tiers))
+            foreach (var t in tiers) foreach (var node in t.Nodes) if (node.AutoLaunder && Upgrades.Has(biz, node.Id)) return true;
+        return false;
+    }
+
+    /// Coin tray: cash in the business's racks goes into a new laundering load, up to the free capacity.
+    public static void LaunderRackCash(Business b)
+    {
+        float room = b.appliedLaunderLimit, taken = 0;
+        foreach (var (_, rack) in Racks(b))
+            foreach (var slot in rack.ItemSlots)
+            {
+                if (room - taken < 1f) break;
+                var cash = slot?.ItemInstance?.TryCast<CashInstance>();
+                if (cash == null || slot.IsLocked || slot.IsRemovalLocked) continue;
+                float take = System.Math.Min(cash.Balance, room - taken);
+                if (take >= cash.Balance) slot.ClearStoredInstance(); // networked
+                else { cash.SetBalance(cash.Balance - take, true); slot.ReplicateStoredInstance(); }
+                taken += take;
+            }
+        taken = (float)System.Math.Floor(taken);
+        if (taken >= 1f) b.StartLaunderingOperation(taken); // the game's call: networked, saved, paid at the end
+        Mod.Log($"coin tray: {b.PropertyName} started laundering ${taken:N0} from its racks (free capacity was ${room:N0})");
+    }
+
+    static List<(string guid, StorageEntity s)> Racks(Business b)
+    {
+        var racks = new List<(string guid, StorageEntity s)>();
+        foreach (var bi in b.BuildableItems)
+            if (bi != null && bi.GetComponent<StorageEntity>() is StorageEntity s && s != null) racks.Add((bi.GUID.ToString(), s));
+        racks.Sort((x, y) => string.CompareOrdinal(x.guid, y.guid)); // same order on every machine
+        return racks;
     }
 
     public static void Produce(Business b, string id, int amount)
     {
         var def = Registry.GetItem(id);
         if (def == null) { Mod.Log($"supply: unknown item {id}"); return; }
-        var racks = new List<(string guid, StorageEntity s)>();
-        foreach (var bi in b.BuildableItems)
-            if (bi != null && bi.GetComponent<StorageEntity>() is StorageEntity s && s != null) racks.Add((bi.GUID.ToString(), s));
-        racks.Sort((x, y) => string.CompareOrdinal(x.guid, y.guid)); // same order on every machine
+        var racks = Racks(b);
         int left = amount, limit = def.StackLimit;
         foreach (var (_, rack) in racks)
             foreach (var slot in rack.ItemSlots)

@@ -39,7 +39,7 @@ public class Mod : MelonMod
 
     // ponytail: dev keys for testing Saul; remove before release.
     // F8: log the floor under the player (to place Saul). F9: forget the Laundromat's upgrades and Saul's progress (host).
-    // F10: give the player what Saul's open quest asks for. F11: run the Laundromat's 08:00 supply now (host).
+    // F10: give the player what Saul's open quest asks for. F11: run the Laundromat's 08:00 coin tray + supply now (host).
     static void DevKeys()
     {
         if (Input.GetKeyDown(KeyCode.F8))
@@ -59,7 +59,7 @@ public class Mod : MelonMod
         if (Input.GetKeyDown(KeyCode.F10) && Upgrades.Ready) Saul.DevGive();
         if (Input.GetKeyDown(KeyCode.F11) && Il2CppFishNet.InstanceFinder.IsServer && Upgrades.Ready) // run the 08:00 supply now
             foreach (var b in Il2CppScheduleOne.Property.Business.Businesses)
-                if (b.PropertyCode == "laundromat") Supply.Produce(b, "mouthwash", System.Math.Max(Supply.PerDay("laundromat"), 1));
+                if (b.PropertyCode == "laundromat") { Supply.LaunderRackCash(b); Supply.Produce(b, "mouthwash", System.Math.Max(Supply.PerDay("laundromat"), 1)); }
         if (Input.GetKeyDown(KeyCode.F9) && Il2CppFishNet.InstanceFinder.IsServer && Upgrades.Instance != null)
         {
             int n = Upgrades.Instance.Owned.RemoveAll(x => x.StartsWith("laundromat:"));
