@@ -38,7 +38,7 @@ public class Mod : MelonMod
 
     // ponytail: dev keys for testing Saul; remove before release.
     // F8: log the floor under the player (to place Saul). F9: forget the Laundromat's upgrades and Saul's progress (host).
-    // F10: Saul's open quest counts as handed over (host).
+    // F10: give the player what Saul's open quest asks for.
     static void DevKeys()
     {
         if (Input.GetKeyDown(KeyCode.F8))
@@ -49,12 +49,7 @@ public class Mod : MelonMod
             var floor = Physics.Raycast(pos + Vector3.up * 0.5f, Vector3.down, out var hit, 5f) ? hit.point : pos;
             Log($"dev F8: floor ({floor.x:F2}f, {floor.y:F2}f, {floor.z:F2}f), player {pos}, facing yaw {p.transform.eulerAngles.y:F0}");
         }
-        if (Input.GetKeyDown(KeyCode.F10) && Il2CppFishNet.InstanceFinder.IsServer && Upgrades.Ready)
-        {
-            int q = Saul.OpenQuest();
-            if (q < 0 || q >= Trees.All["laundromat"].Length) { Log($"dev F10: no open Saul quest ({(q < 0 ? "wait for his text" : "all done")})"); return; }
-            Log($"dev F10: quest {q + 1} -> {Trees.TryBuy("laundromat", "q" + (q + 1)) ?? "done"}");
-        }
+        if (Input.GetKeyDown(KeyCode.F10) && Upgrades.Ready) Saul.DevGive();
         if (Input.GetKeyDown(KeyCode.F9) && Il2CppFishNet.InstanceFinder.IsServer && Upgrades.Instance != null)
         {
             int n = Upgrades.Instance.Owned.RemoveAll(x => x.StartsWith("laundromat:"));
