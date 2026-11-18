@@ -98,7 +98,7 @@ public sealed class Saul : NPC
     }
 
     /// The tier whose quest is open now (offered, not done), -1 = none yet, Length = all done.
-    static int OpenQuest()
+    internal static int OpenQuest()
     {
         var tiers = Trees.All[Biz];
         for (int i = 0; i < tiers.Length; i++)
