@@ -48,6 +48,9 @@ public class Panel
         hrt.SetParent(screen, false);
         hrt.anchorMin = trt.anchorMin; hrt.anchorMax = trt.anchorMax; hrt.pivot = trt.pivot;
         hrt.anchoredPosition = trt.anchoredPosition; hrt.sizeDelta = trt.sizeDelta;
+        // The screen's parent is turned 180° and each section turns itself back: copy that, or the header is mirrored
+        // and its buttons can't be clicked (the raycaster ignores UI facing away).
+        hrt.localRotation = trt.localRotation; hrt.localScale = trt.localScale;
 
         var title = Clone(timeline.transform.Find("Text (TMP)").gameObject, header.transform).GetComponent<TextMeshProUGUI>();
         title.text = $"{bus.PropertyName} upgrades";
@@ -80,6 +83,10 @@ public class Panel
         list.transform.Find("TimeLabel").GetComponent<TextMeshProUGUI>().text = "Cost";
         var rows = list.transform.Find("Scroll View/Viewport/Content");
         for (int i = rows.childCount - 1; i >= 0; i--) rows.GetChild(i).gameObject.SetActive(false); // cloned entries
+        var crt = rows.GetComponent<RectTransform>(); // list from the top
+        crt.pivot = new Vector2(0.5f, 1); crt.anchoredPosition = Vector2.zero;
+        var v = rows.GetComponent<VerticalLayoutGroup>();
+        v.childAlignment = TextAnchor.UpperLeft; v.childControlHeight = true; v.childForceExpandHeight = false; v.childControlWidth = true; v.childForceExpandWidth = true;
         var rowStyle = opList.transform.Find("BusinessLabel").gameObject; // grey column-header text: our row text style
         for (int i = 0; i < 3; i++)
         {
@@ -89,7 +96,7 @@ public class Panel
             var h = row.AddComponent<HorizontalLayoutGroup>();
             h.spacing = 6; h.padding = new RectOffset(8, 4, 0, 0); h.childAlignment = TextAnchor.MiddleLeft;
             h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = h.childForceExpandHeight = false;
-            row.AddComponent<LayoutElement>().preferredHeight = 26;
+            var rle = row.AddComponent<LayoutElement>(); rle.preferredHeight = rle.minHeight = 26;
             var name = Label(rowStyle, row.transform, 95, 0, Color.white, TextAlignmentOptions.MidlineLeft);
             var effect = Label(rowStyle, row.transform, 0, 1, Color.white, TextAlignmentOptions.MidlineLeft);
             var cost = Label(rowStyle, row.transform, 50, 0, Green, TextAlignmentOptions.MidlineRight);
