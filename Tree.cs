@@ -12,13 +12,10 @@ using S1API.Saveables;
 
 namespace BusinessUpgrades;
 
-public enum CartelPath { Any, Defeated, Truced }
-
 /// Capacity = bonus as a multiple of the business's base capacity; Minutes = laundering time (lowest owned wins);
 /// Payout = extra share of every finished load, paid to the bank. Supply = items a day into the business's racks
 /// (highest owned wins; see Supply). Soon = not built yet: shown, can't be bought.
-public record Node(string Id, string Name, string Desc, float Cost, float Capacity = 0, int Minutes = 0, CartelPath Cartel = CartelPath.Any,
-    float Payout = 0, int Supply = 0, bool Soon = false);
+public record Node(string Id, string Name, string Desc, float Cost, float Capacity = 0, int Minutes = 0, float Payout = 0, int Supply = 0, bool Soon = false);
 /// What a quest NPC wants handed over: product units (any drug if Drug is null) of at least MinQuality, having every one
 /// of Effects (game effect names or IDs, case and spaces ignored), plus Cash. Text is what players read.
 public record Request(string Text, int Units, EDrugType? Drug = null, EQuality MinQuality = EQuality.Trash, string[] Effects = null, float Cash = 0);
@@ -53,8 +50,6 @@ public static class Trees
             }),
             new("Industrial", 75000, ERank.Block_Boss, new Request("50 Heavenly cocaine, Energizing and Long faced", 50, EDrugType.Cocaine, EQuality.Heavenly, new[] { "Energizing", "Long faced" }), new Node[]
             {
-                new("industrial", "Industrial machines", "Capacity +{cap}, laundering takes 8 h", 40000, Capacity: 3f, Minutes: 480, Cartel: CartelPath.Defeated),
-                new("cartel_contract", "Cartel contract", "The cartel pays $1,500 a day", 30000, Cartel: CartelPath.Truced),
                 new("wholesale", "Wholesale account", "120 Mouth Wash a day into your racks here (place more racks)", 30000, Supply: 120),
             }),
         },
@@ -79,7 +74,6 @@ public static class Trees
     {
         if (n.Soon) return "Coming soon";
         if (!HasTier(biz, i)) return "Unlock this tier first";
-        if (n.Cartel != CartelPath.Any) return $"Cartel {n.Cartel.ToString().ToLower()} (coming soon)"; // milestone 6
         return null;
     }
 

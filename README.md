@@ -1,6 +1,6 @@
 # BusinessUpgrades
 
-A Schedule I mod: upgrade your businesses through their laundering computer. Each business gets its own upgrade tree, unlocked with cash, your rank, quests from the business's people and your dealings with the cartel. Higher tiers launder more money, faster, and can even produce supplies.
+A Schedule I mod: upgrade your businesses through their laundering computer. Each business gets its own upgrade tree, unlocked with cash, your rank, quests from the business's people. Higher tiers launder more money, faster, and can even produce supplies.
 
 **Status: in development.** The first version covers the Laundromat; the Post Office, Car Wash and Taco Ticklers come later. Works in co-op (every player installs the mod).
 
