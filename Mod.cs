@@ -25,11 +25,34 @@ public class Mod : MelonMod
         try
         {
             Net.Update();
+            DevKeys();
             if (UnityEngine.Time.time < nextTick) return;
             nextTick = UnityEngine.Time.time + 1f;
             Net.Tick();
+            Saul.Tick();
+            Saul.KeepInPlace();
         }
         catch (System.Exception e) { Log($"update: {e.Message}"); }
+    }
+
+    // ponytail: dev keys for testing Saul; remove before release.
+    // F8: log the floor under the player (to place Saul). F9: forget the Laundromat's upgrades and Saul's progress (host).
+    static void DevKeys()
+    {
+        if (Input.GetKeyDown(KeyCode.F8))
+        {
+            var p = Il2CppScheduleOne.PlayerScripts.Player.Local;
+            if (p == null) return;
+            var pos = p.transform.position;
+            var floor = Physics.Raycast(pos + Vector3.up * 0.5f, Vector3.down, out var hit, 5f) ? hit.point : pos;
+            Log($"dev F8: floor ({floor.x:F2}f, {floor.y:F2}f, {floor.z:F2}f), player {pos}, facing yaw {p.transform.eulerAngles.y:F0}");
+        }
+        if (Input.GetKeyDown(KeyCode.F9) && Il2CppFishNet.InstanceFinder.IsServer && Upgrades.Instance != null)
+        {
+            int n = Upgrades.Instance.Owned.RemoveAll(x => x.StartsWith("laundromat:"));
+            Effects.ApplyAll();
+            Log($"dev F9: removed {n} Laundromat entries (upgrades + Saul's progress)");
+        }
     }
 }
 
@@ -55,6 +78,8 @@ static class LaunderingInterfaceInit
         btn.interactable = true;
         var label = btn.GetComponentInChildren<TextMeshProUGUI>();
         if (label != null) label.text = "Upgrades";
+        panel.OpenButton = btn;
+        Panel.UpdateButtons();
     }
 }
 

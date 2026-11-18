@@ -14,7 +14,9 @@ public enum CartelPath { Any, Defeated, Truced }
 
 /// Capacity = bonus as a multiple of the business's base capacity; Minutes = laundering time (lowest owned wins).
 public record Node(string Id, string Name, string Desc, float Cost, float Capacity = 0, int Minutes = 0, CartelPath Cartel = CartelPath.Any);
-public record Tier(string Name, float Cost, ERank Rank, string Quest, Node[] Nodes);
+/// Quest: shown as the gate until "biz:qN" is owned. CashToNpc: the cost is handed to the quest NPC (in the quest), not paid
+/// from the bank, and finishing the quest unlocks the tier at once.
+public record Tier(string Name, float Cost, ERank Rank, string Quest, Node[] Nodes, bool CashToNpc = false);
 
 public static class Trees
 {
@@ -23,11 +25,11 @@ public static class Trees
     {
         ["laundromat"] = new Tier[]
         {
-            new("Back room", 2500, ERank.Street_Rat, null, new Node[]
+            new("Back room", 2500, ERank.Hustler, "Saul: 10 weed + $2,500 cash for his lawyer", new Node[]
             {
                 new("extra_drum", "Extra drum", "Capacity +{cap}", 1500, Capacity: 0.5f),
                 new("fast_cycle", "Fast cycle", "Laundering takes 18 h", 2000, Minutes: 1080),
-            }),
+            }, CashToNpc: true),
             new("The cousin", 7500, ERank.Street_Rat, "20 meth, Standard quality or better", new Node[]
             {
                 new("coin_tray", "Coin tray", "Cash left in the tray launders itself at 08:00", 5000),
@@ -59,7 +61,7 @@ public static class Trees
         if (i > 0 && !HasTier(biz, i - 1)) return $"Unlock tier {i} first";
         var lm = NetworkSingleton<LevelManager>.Instance;
         if (lm != null && lm.Rank < t.Rank) return $"Needs rank {t.Rank.ToString().Replace('_', ' ')}";
-        if (t.Quest != null) return $"Quest: {t.Quest} (coming soon)"; // milestone 4
+        if (t.Quest != null && !Upgrades.Has(biz, "q" + (i + 1))) return $"Quest: {t.Quest}" + (i > 0 ? " (coming soon)" : "");
         return null;
     }
 
@@ -72,6 +74,20 @@ public static class Trees
 
     public static string TierIdOf(int i) => TierId(i);
 
+    // Host: a quest NPC took the items (on the giver's machine). ponytail: trusts the client's handover, like vanilla deals.
+    static string FinishQuest(string biz, int i, Tier t)
+    {
+        if (Upgrades.Has(biz, "q" + (i + 1))) return "Already done";
+        if (i == 0 && !Upgrades.Has(biz, "saul_met")) return "Saul hasn't contacted you yet";
+        if (i > 0 && !HasTier(biz, i - 1)) return $"Unlock tier {i} first";
+        Upgrades.Instance.Owned.Add(biz + ":q" + (i + 1));
+        if (t.CashToNpc) Upgrades.Instance.Owned.Add(biz + ":" + TierId(i));
+        Effects.ApplyAll();
+        Panel.RefreshOpen();
+        Mod.Log($"{biz}: quest {i + 1} done{(t.CashToNpc ? ", tier unlocked" : "")}");
+        return null;
+    }
+
     /// Host only: check, pay from the bank, own. The host's own clicks and clients' requests both come here.
     /// Returns null when bought, else why not.
     public static string TryBuy(string biz, string id)
@@ -81,6 +97,8 @@ public static class Trees
         if (Upgrades.Has(biz, id)) return "Already owned";
         string why, what; float cost;
         int ti;
+        if (id.Length == 2 && id[0] == 'q' && int.TryParse(id.Substring(1), out int qn) && qn >= 1 && qn <= tiers.Length)
+            return FinishQuest(biz, qn - 1, tiers[qn - 1]);
         for (ti = 0; ti < tiers.Length && TierId(ti) != id; ti++) { }
         if (ti < tiers.Length) { why = TierLock(biz, ti); cost = tiers[ti].Cost; what = $"Tier {ti + 1}: {tiers[ti].Name}"; }
         else
@@ -143,6 +161,7 @@ public static class Effects
     public static void ApplyAll()
     {
         foreach (var b in Business.Businesses) Apply(b);
+        Panel.UpdateButtons();
     }
 
     static void Apply(Business b)

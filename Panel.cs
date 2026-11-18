@@ -18,6 +18,13 @@ namespace BusinessUpgrades;
 public class Panel
 {
     public static readonly Dictionary<string, Panel> ByBusiness = new();
+    public Button OpenButton; // "Upgrades" in the title bar: shown once tier 1 is unlocked (Saul's app)
+
+    public static void UpdateButtons()
+    {
+        foreach (var (biz, p) in ByBusiness)
+            if (p.OpenButton != null) p.OpenButton.gameObject.SetActive(Trees.HasTier(biz, 0));
+    }
 
     static readonly Color Orange = new(1f, 0.637f, 0.241f), Muted = new(0.239f, 0.294f, 0.341f),
         Blue = new(0.184f, 0.591f, 0.906f), Red = new(0.906f, 0.254f, 0.184f),

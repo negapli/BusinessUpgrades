@@ -18,6 +18,8 @@ static class Net
     static SteamNetworkClient steam;
     public static bool IsClient => !InstanceFinder.IsServer && InstanceFinder.IsClient;
     static bool Online => steam != null && steam.IsInLobby;
+    /// A co-op client can ask the host for anything (and should hand over items) only while it sees the host.
+    public static bool CanReachHost => Online && steam.GetHostMember() != null;
 
     // --- setup: the library must start before the game joins a lobby (it watches Steam's lobby-entered event) ---
 
