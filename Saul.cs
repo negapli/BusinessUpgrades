@@ -23,8 +23,8 @@ public sealed class Saul : NPC
     const string Biz = "laundromat", Talk = "SaulTalk";
     public const int WeedUnits = 10;
     public const float LawyerCash = 2500f;
-    internal static Vector3 Spot = new(-130.33f, -3.90f, 81.54f); // outside his place, near the Laundromat (picked with F8)
-    internal static Quaternion Facing = Quaternion.Euler(0f, 223f, 0f);
+    internal static readonly Vector3 Spot = new(-130.33f, -3.90f, 81.54f); // spawn: outside the Corner Store's door (picked with F8)
+    internal static readonly Quaternion Facing = Quaternion.Euler(0f, 223f, 0f);
 
     public override bool IsPhysical => true;
 
@@ -32,14 +32,16 @@ public sealed class Saul : NPC
     {
         builder.WithIdentity("businessupgrades_saul", "Saul", "Mediuham") // stable save ID: never change it
             .WithSpawnPosition(Spot, Facing)
-            .WithRelationshipDefaults(r => r.WithDelta(1.0f).SetUnlocked(true).SetUnlockType(NPCRelationship.UnlockType.DirectApproach));
+            .WithRelationshipDefaults(r => r.WithDelta(1.0f).SetUnlocked(true).SetUnlockType(NPCRelationship.UnlockType.DirectApproach))
+            // He lives in the Corner Store by his old laundromat: inside all day; knocking on its door calls him out
+            // (the game's StaticDoor knock -> NPC summon, ~8 s at the door).
+            .WithSchedule(plan => plan.StayInBuilding(S1API.Map.Building.Get<S1API.Map.Buildings.CornerStore>(), 0, 1439));
     }
 
     protected override void OnCreated()
     {
         base.OnCreated();
         Dress(Appearance).Build();
-        Schedule.Disable(); // he hangs around his old laundromat
 
         Dialogue.BuildAndRegisterContainer(Talk, c =>
         {
@@ -124,37 +126,8 @@ public sealed class Saul : NPC
         if (!owned || Get<Saul>() is not Saul s) return;
         Upgrades.Instance.Owned.Add(Biz + ":saul_met");
         s.SendTextMessage("Hello, you don't know me, but I'm starting to know you. I hear you bought my old laundromat. Freaking feds took everything from me.");
-        s.SendTextMessage("Well... not everything. I might still have the USB stick for the old computer. If you're kind to me, I may or may not install the app I made. Come see me at the laundromat.");
+        s.SendTextMessage("Well... not everything. I might still have the USB stick for the old computer. If you're kind to me, I may or may not install the app I made. I crash at the Corner Store next to the laundromat: knock.");
         Mod.Log("Saul: first contact sent");
-    }
-
-    // Dev, once after load: the buildings whose doors are nearest his spot (he should live in the one in front).
-    internal static void LogNearbyBuildings()
-    {
-        var found = new System.Collections.Generic.List<(float d, string s)>();
-        foreach (var b in Object.FindObjectsOfType<Il2CppScheduleOne.Map.NPCEnterableBuilding>())
-            for (int i = 0; i < b.Doors.Count; i++)
-            {
-                var door = b.Doors[i];
-                float d = Vector3.Distance(door.transform.position, Spot);
-                if (d < 40f) found.Add((d, $"\"{b.BuildingName}\" door {i} at {door.transform.position} ({d:F1} m) knock={door.CanKnock} type={b.GetIl2CppType().Name}"));
-            }
-        found.Sort((x, y) => x.d.CompareTo(y.d));
-        Mod.Log($"buildings near Saul's spot: {found.Count}");
-        foreach (var f in found) Mod.Log("  " + f.s);
-    }
-
-    // Host, every 0.5 s: keep him at his spot (S1API spawns him at 0,0,0 until finalized; the navmesh may move him).
-    internal static void KeepInPlace()
-    {
-        if (!InstanceFinder.IsServer || Spot == Vector3.zero || Get<Saul>() is not Saul m || m.gameObject == null) return;
-        if (m.Schedule.IsEnabled) m.Schedule.Disable();
-        if (Vector3.Distance(m.Position, Spot) < 1.5f) return;
-        var npc = m.gameObject.GetComponent<Il2CppScheduleOne.NPCs.NPC>();
-        var agent = npc?.Movement._agent;
-        if (agent != null) agent.enabled = false; // the agent snaps him back to the nearest navmesh point otherwise
-        m.Transform.SetPositionAndRotation(Spot, Facing);
-        Mod.Log($"Saul placed at {Spot}");
     }
 
     // Only paths that exist in the game's Resources (checked in resources.assets).

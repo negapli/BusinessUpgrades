@@ -16,8 +16,10 @@ static class Net
     const string StateKey = "BusinessUpgrades_state", CmdKey = "BusinessUpgrades_cmd";
 
     static SteamNetworkClient steam;
-    public static bool IsClient => !InstanceFinder.IsServer && InstanceFinder.IsClient;
     static bool Online => steam != null && steam.IsInLobby;
+    /// A co-op client: in someone else's lobby and not the server. (FishNet alone isn't enough: while a save loads the
+    /// host briefly reports IsServer false, and the host then overwrote its loaded list with the lobby's empty copy.)
+    public static bool IsClient => Online && !steam.IsHost && !InstanceFinder.IsServer;
     /// A co-op client can ask the host for anything (and should hand over items) only while it sees the host.
     public static bool CanReachHost => Online && steam.GetHostMember() != null;
 
@@ -66,8 +68,8 @@ static class Net
         if (Upgrades.Instance == null || !Upgrades.Ready) return;
         try
         {
-            if (InstanceFinder.IsServer) { Publish(); ReadCommands(); }
-            else if (InstanceFinder.IsClient) Receive();
+            if (IsClient) Receive();
+            else if (InstanceFinder.IsServer) { Publish(); ReadCommands(); }
         }
         catch (Exception e) { Mod.Log($"net: {e.Message}"); }
     }
@@ -110,6 +112,7 @@ static class Net
         {
             lastState = data;
             Upgrades.Instance.Owned = data == "" ? new() : new List<string>(data.Split(','));
+            Mod.Log($"mirror: {Upgrades.Instance.Owned.Count} entries from the host");
             Effects.ApplyAll();
             Panel.RefreshOpen();
         }
