@@ -48,6 +48,12 @@ public class Mod : MelonMod
             var pos = p.transform.position;
             var floor = Physics.Raycast(pos + Vector3.up * 0.5f, Vector3.down, out var hit, 5f) ? hit.point : pos;
             Log($"dev F8: floor ({floor.x:F2}f, {floor.y:F2}f, {floor.z:F2}f), player {pos}, facing yaw {p.transform.eulerAngles.y:F0}");
+            foreach (var st in Object.FindObjectsOfType<Il2CppScheduleOne.Storage.StorageEntity>())
+            {
+                float d = Vector3.Distance(st.transform.position, pos);
+                if (d > 8f) continue;
+                Log($"  storage \"{st.StorageEntityName}\" ({st.GetIl2CppType().Name}, object {st.gameObject.name}) slots={st.SlotCount} at {st.transform.position} ({d:F1} m)");
+            }
         }
         if (Input.GetKeyDown(KeyCode.F10) && Upgrades.Ready) Saul.DevGive();
         if (Input.GetKeyDown(KeyCode.F9) && Il2CppFishNet.InstanceFinder.IsServer && Upgrades.Instance != null)
