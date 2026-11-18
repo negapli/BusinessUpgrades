@@ -24,7 +24,7 @@ namespace BusinessUpgrades;
 public sealed class Saul : NPC
 {
     const string Biz = "laundromat", Talk = "SaulTalk";
-    internal static readonly Vector3 Spot = new(-130.33f, -3.90f, 81.54f); // spawn: outside the Corner Store's door (picked with F8)
+    internal static readonly Vector3 Spot = new(-130.33f, -3.90f, 81.54f); // spawn: outside the Corner Store's door (picked in game)
     internal static readonly Quaternion Facing = Quaternion.Euler(0f, 223f, 0f);
 
     // What he says, per quest (index = tier): the ask, the thanks, and the text that offers it (T1's offer = first contact).
@@ -99,7 +99,7 @@ public sealed class Saul : NPC
     }
 
     /// The tier whose quest is open now (offered, not done), -1 = none yet, Length = all done.
-    internal static int OpenQuest()
+    static int OpenQuest()
     {
         var tiers = Trees.All[Biz];
         for (int i = 0; i < tiers.Length; i++)
@@ -185,57 +185,6 @@ public sealed class Saul : NPC
             while (units > 0 && s.Quantity > 0) { s.ChangeQuantity(-1); units -= per; }
             if (units <= 0) return;
         }
-    }
-
-    // ponytail: dev only (F10), remove before release. Gives the player what the open quest asks for: an existing product
-    // with the drug + effects, or (cocaine only) creates "Saul Test Blend" through the game's product creation, which
-    // stays in the save's product list. Given in jars (5 units) at the quest's quality; T1's cash too.
-    internal static void DevGive()
-    {
-        int q = OpenQuest();
-        var tiers = Trees.All[Biz];
-        if (q < 0 || q >= tiers.Length) { Mod.Log($"dev F10: no open Saul quest ({(q < 0 ? "wait for his text" : "all done")})"); return; }
-        var r = tiers[q].Request;
-        var pm = NetworkSingleton<ProductManager>.Instance;
-        ProductDefinition def = null;
-        foreach (var d in pm.AllProducts)
-            if (d != null && (!r.Drug.HasValue || d.DrugType == r.Drug.Value) && HasAll(d, r.Effects)) { def = d; break; }
-        if (def == null)
-        {
-            if (r.Drug != EDrugType.Cocaine) { Mod.Log($"dev F10: no product matches \"{r.Text}\" (only cocaine can be created)"); return; }
-            CocaineDefinition look = null;
-            foreach (var d in pm.AllProducts) if ((look = d?.TryCast<CocaineDefinition>()) != null) break;
-            var ids = new Il2CppSystem.Collections.Generic.List<string>();
-            foreach (var e in r.Effects ?? System.Array.Empty<string>()) ids.Add(e.Replace(" ", "").ToLower());
-            pm.CreateCocaine_Server("Saul Test Blend", "saultestblend", EDrugType.Cocaine, ids, look?.AppearanceSettings);
-            def = Il2CppScheduleOne.Registry.GetItem("saultestblend")?.TryCast<ProductDefinition>();
-            if (def == null) { Mod.Log("dev F10: created Saul Test Blend, but it isn't registered yet: press F10 again"); return; }
-            Mod.Log("dev F10: created product Saul Test Blend (saultestblend)");
-        }
-        var jar = Il2CppScheduleOne.Registry.GetItem("jar")?.TryCast<Il2CppScheduleOne.Product.Packaging.PackagingDefinition>();
-        var quality = r.MinQuality > EQuality.Standard ? r.MinQuality : EQuality.Standard;
-        var inv = PlayerSingleton<PlayerInventory>.Instance;
-        int per = jar != null ? jar.Quantity : 1, packs = (r.Units + per - 1) / per;
-        for (int i = 0; i < packs; i++)
-        {
-            var item = def.GetDefaultInstance(1).TryCast<ProductItemInstance>();
-            item.SetQuality(quality);
-            if (jar != null) item.SetPackaging(jar);
-            inv.AddItemToInventory(item);
-        }
-        if (r.Cash > 0) NetworkSingleton<MoneyManager>.Instance.ChangeCashBalance(r.Cash, true, true);
-        Mod.Log($"dev F10: gave {packs} x {def.Name} ({per}/pack, {quality}){(r.Cash > 0 ? $" + ${r.Cash} cash" : "")} for quest {q + 1}");
-    }
-
-    static bool HasAll(ProductDefinition d, string[] effects)
-    {
-        foreach (var want in effects ?? System.Array.Empty<string>())
-        {
-            bool has = false;
-            foreach (var e in d.Properties) if (e != null && (Same(e.Name, want) || Same(e.ID, want))) has = true;
-            if (!has) return false;
-        }
-        return true;
     }
 
     // --- host, once a second: texts (first contact, then each next quest), mornings only, one per tick ---

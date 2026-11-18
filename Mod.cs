@@ -27,7 +27,6 @@ public class Mod : MelonMod
         try
         {
             Net.Update();
-            DevKeys();
             if (UnityEngine.Time.time < nextTick) return;
             nextTick = UnityEngine.Time.time + 1f;
             Net.Tick();
@@ -35,37 +34,6 @@ public class Mod : MelonMod
             Supply.Tick();
         }
         catch (System.Exception e) { Log($"update: {e.Message}"); }
-    }
-
-    // ponytail: dev keys for testing Saul; remove before release.
-    // F8: log the floor under the player (to place Saul). F9: forget the Laundromat's upgrades and Saul's progress (host).
-    // F10: give the player what Saul's open quest asks for. F11: run the Laundromat's 08:00 coin tray + supply now (host).
-    static void DevKeys()
-    {
-        if (Input.GetKeyDown(KeyCode.F8))
-        {
-            var p = Il2CppScheduleOne.PlayerScripts.Player.Local;
-            if (p == null) return;
-            var pos = p.transform.position;
-            var floor = Physics.Raycast(pos + Vector3.up * 0.5f, Vector3.down, out var hit, 5f) ? hit.point : pos;
-            Log($"dev F8: floor ({floor.x:F2}f, {floor.y:F2}f, {floor.z:F2}f), player {pos}, facing yaw {p.transform.eulerAngles.y:F0}");
-            foreach (var st in Object.FindObjectsOfType<Il2CppScheduleOne.Storage.StorageEntity>())
-            {
-                float d = Vector3.Distance(st.transform.position, pos);
-                if (d > 8f) continue;
-                Log($"  storage \"{st.StorageEntityName}\" ({st.GetIl2CppType().Name}, object {st.gameObject.name}) slots={st.SlotCount} at {st.transform.position} ({d:F1} m)");
-            }
-        }
-        if (Input.GetKeyDown(KeyCode.F10) && Upgrades.Ready) Saul.DevGive();
-        if (Input.GetKeyDown(KeyCode.F11) && Il2CppFishNet.InstanceFinder.IsServer && Upgrades.Ready) // run the 08:00 supply now
-            foreach (var b in Il2CppScheduleOne.Property.Business.Businesses)
-                if (b.PropertyCode == "laundromat") { Supply.LaunderRackCash(b); Supply.Produce(b, "mouthwash", System.Math.Max(Supply.PerDay("laundromat"), 1)); }
-        if (Input.GetKeyDown(KeyCode.F9) && Il2CppFishNet.InstanceFinder.IsServer && Upgrades.Instance != null)
-        {
-            int n = Upgrades.Instance.Owned.RemoveAll(x => x.StartsWith("laundromat:"));
-            Effects.ApplyAll();
-            Log($"dev F9: removed {n} Laundromat entries (upgrades + Saul's progress)");
-        }
     }
 }
 
