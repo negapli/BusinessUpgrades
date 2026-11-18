@@ -57,7 +57,7 @@ public class Panel
             tabs.Add(MakeButton(tabRow, "T" + (i + 1), 90, () => { tier = t; message = null; Refresh(); }));
         }
         Text(tabRow, "", 1); // spacer
-        MakeButton(tabRow, "Back", 120, () => root.SetActive(false));
+        MakeButton(tabRow, "Back", 120, () => { Mod.Log("Back clicked"); Hide(); });
 
         header = Text(Row(root.transform), "", 1, 30);
         var tr = Row(root.transform);

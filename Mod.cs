@@ -28,6 +28,7 @@ static class LaunderingInterfaceInit
         Effects.Register(bus, __instance);
         if (!Trees.All.ContainsKey(bus.PropertyCode)) return; // only businesses with a tree get the button
 
+        if (!dumped) { dumped = true; Dump(__instance.canvas.transform, 0); } // dev: screen layout for the UI rework
         var panel = new Panel(__instance, bus);
         var src = __instance.launderButton;
         var btn = Object.Instantiate(src.gameObject, src.transform.parent).GetComponent<Button>();
@@ -39,6 +40,21 @@ static class LaunderingInterfaceInit
         btn.interactable = true;
         var label = btn.GetComponentInChildren<TextMeshProUGUI>();
         if (label != null) label.text = "Upgrades";
+    }
+
+    static bool dumped;
+    static void Dump(Transform t, int depth)
+    {
+        var rt = t.GetComponent<RectTransform>();
+        var comps = new System.Collections.Generic.List<string>();
+        foreach (var c in t.GetComponents<Component>()) { var n = c.GetIl2CppType().Name; if (n != "RectTransform" && n != "CanvasRenderer") comps.Add(n); }
+        var tmp = t.GetComponent<TextMeshProUGUI>();
+        var img = t.GetComponent<Image>();
+        Mod.Log($"ui {new string(' ', depth * 2)}{t.name}{(t.gameObject.activeSelf ? "" : " (off)")} [{string.Join(",", comps)}]"
+            + (rt != null ? $" pos {rt.anchoredPosition} size {rt.rect.size} anchors {rt.anchorMin}-{rt.anchorMax}" : "")
+            + (tmp != null ? $" text \"{tmp.text}\" size {tmp.fontSize} color {tmp.color}" : "")
+            + (img != null ? $" img {(img.sprite != null ? img.sprite.name : "-")} color {img.color} type {img.type}" : ""));
+        for (int i = 0; i < t.childCount; i++) Dump(t.GetChild(i), depth + 1);
     }
 }
 
