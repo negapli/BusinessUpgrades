@@ -119,8 +119,15 @@ public static class Effects
         float bonus = 0;
         foreach (var t in tiers) foreach (var n in t.Nodes) if (Upgrades.Has(b.PropertyCode, n.Id)) bonus += n.Capacity;
         b.LaunderCapacity = c * (1 + bonus);
-        if (Screens.TryGetValue(b.PropertyCode, out var ui) && ui != null)
-            ui.launderCapacityLabel.text = MoneyManager.FormatAmount(b.LaunderCapacity);
+        if (!Screens.TryGetValue(b.PropertyCode, out var ui) || ui == null) return;
+        ui.launderCapacityLabel.text = MoneyManager.FormatAmount(b.LaunderCapacity);
+        var stamps = ui.launderButton.transform.parent.Find("Timestamps"); // "START", "12 Hrs", "24 Hrs" under the timeline
+        int hours = Minutes(b.PropertyCode) / 60;
+        if (stamps != null && stamps.childCount == 3)
+        {
+            stamps.GetChild(1).GetComponent<Il2CppTMPro.TextMeshProUGUI>().text = $"{hours / 2f:0.#} Hrs";
+            stamps.GetChild(2).GetComponent<Il2CppTMPro.TextMeshProUGUI>().text = $"{hours} Hrs";
+        }
     }
 
     public static int Minutes(string biz)
