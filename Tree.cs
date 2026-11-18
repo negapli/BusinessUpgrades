@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Il2CppScheduleOne.DevUtilities;
+using Il2CppScheduleOne.ItemFramework;
 using Il2CppScheduleOne.Levelling;
+using Il2CppScheduleOne.Product;
 using Il2CppScheduleOne.Money;
 using Il2CppScheduleOne.Property;
 using Il2CppScheduleOne.UI;
@@ -14,9 +16,13 @@ public enum CartelPath { Any, Defeated, Truced }
 
 /// Capacity = bonus as a multiple of the business's base capacity; Minutes = laundering time (lowest owned wins).
 public record Node(string Id, string Name, string Desc, float Cost, float Capacity = 0, int Minutes = 0, CartelPath Cartel = CartelPath.Any);
-/// Quest: shown as the gate until "biz:qN" is owned. CashToNpc: the cost is handed to the quest NPC (in the quest), not paid
-/// from the bank, and finishing the quest unlocks the tier at once.
-public record Tier(string Name, float Cost, ERank Rank, string Quest, Node[] Nodes, bool CashToNpc = false);
+/// What a quest NPC wants handed over: product units (any drug if Drug is null) of at least MinQuality, with Effect (a
+/// game effect name) if set, plus Cash. Text is what players read.
+public record Request(string Text, int Units, EDrugType? Drug = null, EQuality MinQuality = EQuality.Trash, string Effect = null, float Cash = 0);
+
+/// Request: the tier's quest, the gate until "biz:qN" is owned. CashToNpc: the cost is handed to the quest NPC (in the
+/// request's Cash), not paid from the bank, and finishing the quest unlocks the tier at once.
+public record Tier(string Name, float Cost, ERank Rank, Request Request, Node[] Nodes, bool CashToNpc = false);
 
 public static class Trees
 {
@@ -25,24 +31,24 @@ public static class Trees
     {
         ["laundromat"] = new Tier[]
         {
-            new("Back room", 2500, ERank.Hustler, "Saul: 10 weed + $2,500 cash for his lawyer", new Node[]
+            new("Back room", 2500, ERank.Hustler, new Request("10 weed and $2,500 cash", 10, EDrugType.Marijuana, Cash: 2500), new Node[]
             {
                 new("extra_drum", "Extra drum", "Capacity +{cap}", 1500, Capacity: 0.5f),
                 new("fast_cycle", "Fast cycle", "Laundering takes 18 h", 2000, Minutes: 1080),
             }, CashToNpc: true),
-            new("The cousin", 7500, ERank.Street_Rat, "20 meth, Standard quality or better", new Node[]
+            new("Old friends", 7500, ERank.Hustler, new Request("20 meth, Standard quality or better", 20, EDrugType.Methamphetamine, EQuality.Standard), new Node[]
             {
                 new("coin_tray", "Coin tray", "Cash left in the tray launders itself at 08:00", 5000),
                 new("bigger_drums", "Bigger drums", "Capacity +{cap}", 6000, Capacity: 1f),
                 new("supply_closet", "Supply closet", "10 Mouth Wash a day", 4000),
             }),
-            new("Night shift", 20000, ERank.Bagman, "15 of a product with the Energizing effect", new Node[]
+            new("Night shift", 20000, ERank.Bagman, new Request("15 of anything Energizing", 15, Effect: "Energizing"), new Node[]
             {
                 new("night_shift", "Night shift", "Laundering takes 12 h", 12000, Minutes: 720),
                 new("two_lines", "Two lines", "A 2nd load runs at the same time", 15000),
                 new("bulk_supplier", "Bulk supplier", "40 Mouth Wash a day", 12000),
             }),
-            new("Industrial", 75000, ERank.Block_Boss, null, new Node[]
+            new("Industrial", 75000, ERank.Block_Boss, new Request("50 of your product, Premium quality or better", 50, MinQuality: EQuality.Premium), new Node[]
             {
                 new("industrial", "Industrial machines", "Capacity +{cap}, laundering takes 8 h", 40000, Capacity: 3f, Minutes: 480, Cartel: CartelPath.Defeated),
                 new("cartel_contract", "Cartel contract", "The cartel pays $1,500 a day", 30000, Cartel: CartelPath.Truced),
@@ -61,7 +67,8 @@ public static class Trees
         if (i > 0 && !HasTier(biz, i - 1)) return $"Unlock tier {i} first";
         var lm = NetworkSingleton<LevelManager>.Instance;
         if (lm != null && lm.Rank < t.Rank) return $"Needs rank {t.Rank.ToString().Replace('_', ' ')}";
-        if (t.Quest != null && !Upgrades.Has(biz, "q" + (i + 1))) return $"Quest: {t.Quest}" + (i > 0 ? " (coming soon)" : "");
+        if (t.Request != null && !Upgrades.Has(biz, "q" + (i + 1)))
+            return i > 0 && !Upgrades.Has(biz, "offer" + (i + 1)) ? "Wait for Saul's text" : $"Saul wants {t.Request.Text}";
         return null;
     }
 
@@ -78,8 +85,7 @@ public static class Trees
     static string FinishQuest(string biz, int i, Tier t)
     {
         if (Upgrades.Has(biz, "q" + (i + 1))) return "Already done";
-        if (i == 0 && !Upgrades.Has(biz, "saul_met")) return "Saul hasn't contacted you yet";
-        if (i > 0 && !HasTier(biz, i - 1)) return $"Unlock tier {i} first";
+        if (!Upgrades.Has(biz, i == 0 ? "saul_met" : "offer" + (i + 1))) return "Saul hasn't asked for it yet";
         Upgrades.Instance.Owned.Add(biz + ":q" + (i + 1));
         if (t.CashToNpc) Upgrades.Instance.Owned.Add(biz + ":" + TierId(i));
         Effects.ApplyAll();
