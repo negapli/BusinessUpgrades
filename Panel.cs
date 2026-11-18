@@ -107,7 +107,7 @@ public class Panel
     void BuyTier()
     {
         if (Trees.HasTier(biz, tier) || Trees.TierLock(biz, tier) != null) return;
-        if (!Pay(Trees.All[biz][tier].Cost)) return;
+        if (!Pay(Trees.All[biz][tier].Cost, $"Tier {tier + 1}: {Trees.All[biz][tier].Name}")) return;
         Trees.OwnTier(biz, tier);
         Mod.Log($"{biz}: unlocked tier {tier + 1}");
         Refresh();
@@ -117,19 +117,20 @@ public class Panel
     {
         var n = Trees.All[biz][tier].Nodes[k];
         if (Upgrades.Has(biz, n.Id) || Trees.NodeLock(biz, tier, n) != null) return;
-        if (!Pay(n.Cost)) return;
+        if (!Pay(n.Cost, n.Name)) return;
         Trees.Own(biz, n.Id);
         Mod.Log($"{biz}: bought {n.Id}; capacity {bus.LaunderCapacity}, laundering {Effects.Minutes(biz)} min");
         Refresh();
     }
 
-    bool Pay(float cost)
+    bool Pay(float cost, string what)
     {
         // ponytail: single player only; milestone 3 routes purchases through the host
         if (Upgrades.Instance == null) { message = "No save loaded"; Refresh(); return false; }
         var money = NetworkSingleton<MoneyManager>.Instance;
-        if (money.cashBalance < cost) { message = "Not enough cash"; Refresh(); return false; }
-        money.ChangeCashBalance(-cost, true, true);
+        // Paid from the bank (like property purchases): networked, and listed in the phone's banking app.
+        if (money.sync___get_value_onlineBalance() < cost) { message = "Not enough money in the bank"; Refresh(); return false; }
+        money.CreateOnlineTransaction($"{bus.PropertyName} upgrade", -cost, 1f, what);
         message = null;
         return true;
     }
