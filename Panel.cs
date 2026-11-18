@@ -34,14 +34,16 @@ public class Panel
         root = new GameObject("BusinessUpgradesPanel");
         var rt = root.AddComponent<RectTransform>();
         rt.SetParent(ui.container, false);
-        // The container is scaled (and mirrored) differently from the game's buttons: match the Launder button's
-        // world scale so text reads right and clones keep their size, then size the panel to cover the container.
-        var c = ui.container.lossyScale; var b = ui.launderButton.transform.lossyScale;
+        // The container is mirrored/scaled differently from where the game's button lives: give the panel that place's
+        // world rotation and scale, so cloned buttons and labels render like the originals; then cover the container.
+        var home = ui.launderButton.transform.parent; // where the game's own button lives (and renders right)
+        var c = ui.container.lossyScale; var b = home.lossyScale;
         var s = new Vector3(b.x / c.x, b.y / c.y, 1);
         rt.localScale = s;
+        rt.rotation = home.rotation; // the container is turned around compared to the button's parent
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = new Vector2(ui.container.rect.width / Mathf.Abs(s.x), ui.container.rect.height / Mathf.Abs(s.y));
-        Mod.Log($"panel scale {s} (container {c}, button {b}), size {rt.sizeDelta}");
+        Mod.Log($"panel scale {s} (container {c.ToString("F5")} rot {ui.container.eulerAngles}, home {b.ToString("F5")} rot {home.eulerAngles}, button local {ui.launderButton.transform.localScale}), size {rt.sizeDelta}");
         root.AddComponent<Image>().color = new Color(0.17f, 0.26f, 0.36f, 1f); // opaque: blocks clicks to the screen below
         var v = root.AddComponent<VerticalLayoutGroup>();
         v.padding = new RectOffset(24, 24, 20, 20); v.spacing = 10;
