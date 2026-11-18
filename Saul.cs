@@ -32,7 +32,7 @@ public sealed class Saul : NPC
         "So you came. Here's the deal: {req} for my lawyer and my nerves. Do that, and I put my app on the old computer.",
         "My nerves are shot, the feds are still sniffing around. {req}. Then I'll open up the next part of the app.",
         "Long nights, short money. I need something to keep me going: {req}.",
-        "My old contacts are back in town, and they're thirsty. {req}. Do this and I'll show you how the big boys wash money.",
+        "My old contacts are back in town, and they only take the best: {req}. Do this and I'll show you how the big boys wash money.",
     };
     static readonly string[] Thanks =
     {
@@ -46,7 +46,7 @@ public sealed class Saul : NPC
         null,
         "The app's treating you well? Good. I need another favor. Knock when you have time.",
         "You've come a long way. I've got something else for you. Corner Store, you know where.",
-        "Big things are moving. Come see me, we need to talk.",
+        "Big things are moving. My old contacts want the good stuff. Come see me, we need to talk.",
     };
 
     public override bool IsPhysical => true;
@@ -138,10 +138,10 @@ public sealed class Saul : NPC
         if (def == null) return 0;
         if (r.Drug.HasValue && def.DrugType != r.Drug.Value) return 0;
         if (p.Quality < r.MinQuality) return 0;
-        if (r.Effect != null)
+        foreach (var want in r.Effects ?? System.Array.Empty<string>())
         {
             bool has = false;
-            foreach (var e in def.Properties) if (e != null && e.Name == r.Effect) has = true;
+            foreach (var e in def.Properties) if (e != null && (Same(e.Name, want) || Same(e.ID, want))) has = true;
             if (!has) return 0;
         }
         return p.Amount;
@@ -157,10 +157,12 @@ public sealed class Saul : NPC
             var def = p?.Definition?.TryCast<ProductDefinition>();
             if (def == null) continue;
             var fx = new System.Collections.Generic.List<string>();
-            foreach (var e in def.Properties) if (e != null) fx.Add(e.Name);
+            foreach (var e in def.Properties) if (e != null) fx.Add($"{e.Name}/{e.ID}");
             Mod.Log($"  {s.Quantity} x {def.Name} ({p.Amount}/pack) {def.DrugType} {p.Quality} [{string.Join(", ", fx)}]");
         }
     }
+
+    static bool Same(string a, string b) => string.Equals(a?.Replace(" ", ""), b?.Replace(" ", ""), System.StringComparison.OrdinalIgnoreCase);
 
     static int Count(Request r)
     {

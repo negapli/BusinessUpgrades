@@ -16,9 +16,9 @@ public enum CartelPath { Any, Defeated, Truced }
 
 /// Capacity = bonus as a multiple of the business's base capacity; Minutes = laundering time (lowest owned wins).
 public record Node(string Id, string Name, string Desc, float Cost, float Capacity = 0, int Minutes = 0, CartelPath Cartel = CartelPath.Any);
-/// What a quest NPC wants handed over: product units (any drug if Drug is null) of at least MinQuality, with Effect (a
-/// game effect name) if set, plus Cash. Text is what players read.
-public record Request(string Text, int Units, EDrugType? Drug = null, EQuality MinQuality = EQuality.Trash, string Effect = null, float Cash = 0);
+/// What a quest NPC wants handed over: product units (any drug if Drug is null) of at least MinQuality, having every one
+/// of Effects (game effect names or IDs, case and spaces ignored), plus Cash. Text is what players read.
+public record Request(string Text, int Units, EDrugType? Drug = null, EQuality MinQuality = EQuality.Trash, string[] Effects = null, float Cash = 0);
 
 /// Request: the tier's quest, the gate until "biz:qN" is owned. CashToNpc: the cost is handed to the quest NPC (in the
 /// request's Cash), not paid from the bank, and finishing the quest unlocks the tier at once.
@@ -42,13 +42,13 @@ public static class Trees
                 new("bigger_drums", "Bigger drums", "Capacity +{cap}", 6000, Capacity: 1f),
                 new("supply_closet", "Supply closet", "10 Mouth Wash a day", 4000),
             }),
-            new("Night shift", 20000, ERank.Bagman, new Request("15 of anything Energizing", 15, Effect: "Energizing"), new Node[]
+            new("Night shift", 20000, ERank.Bagman, new Request("15 of anything Energizing", 15, Effects: new[] { "Energizing" }), new Node[]
             {
                 new("night_shift", "Night shift", "Laundering takes 12 h", 12000, Minutes: 720),
                 new("two_lines", "Two lines", "A 2nd load runs at the same time", 15000),
                 new("bulk_supplier", "Bulk supplier", "40 Mouth Wash a day", 12000),
             }),
-            new("Industrial", 75000, ERank.Block_Boss, new Request("50 of your product, Premium quality or better", 50, MinQuality: EQuality.Premium), new Node[]
+            new("Industrial", 75000, ERank.Block_Boss, new Request("50 Heavenly cocaine, Energizing and Long faced", 50, EDrugType.Cocaine, EQuality.Heavenly, new[] { "Energizing", "Long faced" }), new Node[]
             {
                 new("industrial", "Industrial machines", "Capacity +{cap}, laundering takes 8 h", 40000, Capacity: 3f, Minutes: 480, Cartel: CartelPath.Defeated),
                 new("cartel_contract", "Cartel contract", "The cartel pays $1,500 a day", 30000, Cartel: CartelPath.Truced),
