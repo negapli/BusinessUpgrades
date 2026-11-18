@@ -106,3 +106,18 @@ static class BusinessMinsPass
         foreach (var op in __instance.LaunderingOperations) op.completionTime_Minutes = m;
     }
 }
+
+// Cleaner books: a finished load pays its bonus share to the bank too (host only, like the game's own payout).
+[HarmonyPatch(typeof(Business), nameof(Business.CompleteOperation))]
+static class BusinessCompleteOperation
+{
+    static void Prefix(Business __instance, LaunderingOperation op)
+    {
+        if (!Il2CppFishNet.InstanceFinder.IsServer || op == null) return;
+        float bonus = op.amount * Effects.Payout(__instance.PropertyCode);
+        if (bonus < 1f) return;
+        Il2CppScheduleOne.DevUtilities.NetworkSingleton<Il2CppScheduleOne.Money.MoneyManager>.Instance
+            .CreateOnlineTransaction($"Cleaner books ({__instance.PropertyName})", bonus, 1f, string.Empty);
+        Mod.Log($"{__instance.PropertyCode}: payout bonus ${bonus:N0} on a ${op.amount:N0} load");
+    }
+}

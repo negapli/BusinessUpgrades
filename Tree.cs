@@ -14,8 +14,10 @@ namespace BusinessUpgrades;
 
 public enum CartelPath { Any, Defeated, Truced }
 
-/// Capacity = bonus as a multiple of the business's base capacity; Minutes = laundering time (lowest owned wins).
-public record Node(string Id, string Name, string Desc, float Cost, float Capacity = 0, int Minutes = 0, CartelPath Cartel = CartelPath.Any);
+/// Capacity = bonus as a multiple of the business's base capacity; Minutes = laundering time (lowest owned wins);
+/// Payout = extra share of every finished load, paid to the bank. Soon = not built yet: shown, can't be bought.
+public record Node(string Id, string Name, string Desc, float Cost, float Capacity = 0, int Minutes = 0, CartelPath Cartel = CartelPath.Any,
+    float Payout = 0, bool Soon = false);
 /// What a quest NPC wants handed over: product units (any drug if Drug is null) of at least MinQuality, having every one
 /// of Effects (game effect names or IDs, case and spaces ignored), plus Cash. Text is what players read.
 public record Request(string Text, int Units, EDrugType? Drug = null, EQuality MinQuality = EQuality.Trash, string[] Effects = null, float Cash = 0);
@@ -38,21 +40,21 @@ public static class Trees
             }, CashToNpc: true),
             new("Old friends", 7500, ERank.Hustler, new Request("20 meth, Standard quality or better", 20, EDrugType.Methamphetamine, EQuality.Standard), new Node[]
             {
-                new("coin_tray", "Coin tray", "Cash left in the tray launders itself at 08:00", 5000),
+                new("coin_tray", "Coin tray", "Cash left in the tray launders itself at 08:00", 5000, Soon: true),
                 new("bigger_drums", "Bigger drums", "Capacity +{cap}", 6000, Capacity: 1f),
-                new("supply_closet", "Supply closet", "10 Mouth Wash a day", 4000),
+                new("supply_closet", "Supply closet", "10 Mouth Wash a day", 4000, Soon: true),
             }),
             new("Night shift", 20000, ERank.Bagman, new Request("15 of anything Energizing", 15, Effects: new[] { "Energizing" }), new Node[]
             {
                 new("night_shift", "Night shift", "Laundering takes 12 h", 12000, Minutes: 720),
-                new("two_lines", "Two lines", "A 2nd load runs at the same time", 15000),
-                new("bulk_supplier", "Bulk supplier", "40 Mouth Wash a day", 12000),
+                new("cleaner_books", "Cleaner books", "Laundered money +10% (Saul's accountant)", 15000, Payout: 0.1f),
+                new("bulk_supplier", "Bulk supplier", "40 Mouth Wash a day", 12000, Soon: true),
             }),
             new("Industrial", 75000, ERank.Block_Boss, new Request("50 Heavenly cocaine, Energizing and Long faced", 50, EDrugType.Cocaine, EQuality.Heavenly, new[] { "Energizing", "Long faced" }), new Node[]
             {
                 new("industrial", "Industrial machines", "Capacity +{cap}, laundering takes 8 h", 40000, Capacity: 3f, Minutes: 480, Cartel: CartelPath.Defeated),
                 new("cartel_contract", "Cartel contract", "The cartel pays $1,500 a day", 30000, Cartel: CartelPath.Truced),
-                new("wholesale", "Wholesale account", "120 Mouth Wash a day + a 2nd shelf", 30000),
+                new("wholesale", "Wholesale account", "120 Mouth Wash a day + a 2nd shelf", 30000, Soon: true),
             }),
         },
     };
@@ -74,6 +76,7 @@ public static class Trees
 
     public static string NodeLock(string biz, int i, Node n)
     {
+        if (n.Soon) return "Coming soon";
         if (!HasTier(biz, i)) return "Unlock this tier first";
         if (n.Cartel != CartelPath.Any) return $"Cartel {n.Cartel.ToString().ToLower()} (coming soon)"; // milestone 6
         return null;
@@ -189,6 +192,14 @@ public static class Effects
             stamps.GetChild(1).GetComponent<Il2CppTMPro.TextMeshProUGUI>().text = $"{hours / 2f:0.#} Hrs";
             stamps.GetChild(2).GetComponent<Il2CppTMPro.TextMeshProUGUI>().text = $"{hours} Hrs";
         }
+    }
+
+    public static float Payout(string biz)
+    {
+        float p = 0;
+        if (Trees.All.TryGetValue(biz, out var tiers))
+            foreach (var t in tiers) foreach (var n in t.Nodes) if (Upgrades.Has(biz, n.Id)) p += n.Payout;
+        return p;
     }
 
     public static int Minutes(string biz)
