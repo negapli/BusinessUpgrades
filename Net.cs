@@ -61,9 +61,9 @@ static class Net
     public static void Tick()
     {
         // A co-op client never loads the save, so S1API never creates Upgrades there: make the mirror of the host's list.
-        if (Upgrades.Instance == null && IsClient) new Upgrades();
+        if (IsClient && !Upgrades.Ready) { if (Upgrades.Instance == null) new Upgrades(); Upgrades.Instance.Owned = new(); lastState = null; Upgrades.Ready = true; } // fresh mirror per join
         if (!Online) { lastPublished = lastState = null; handled.Clear(); return; } // a new lobby must get the list even if unchanged
-        if (Upgrades.Instance == null) return;
+        if (Upgrades.Instance == null || !Upgrades.Ready) return;
         try
         {
             if (InstanceFinder.IsServer) { Publish(); ReadCommands(); }

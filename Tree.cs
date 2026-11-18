@@ -127,16 +127,20 @@ public static class Trees
 public class Upgrades : Saveable
 {
     public static Upgrades Instance { get; private set; }
+    /// False while a save loads: S1API resets a save without data only at the END of the load (OnCreated), so nothing
+    /// may act on the list before (Saul's texts went out twice). The client mirror is ready at once.
+    public static bool Ready;
     [SaveableField("owned")] public List<string> Owned = new();
     public Upgrades() => Instance = this;
 
     public static bool Has(string biz, string id) => Instance != null && Instance.Owned.Contains(biz + ":" + id);
 
     // S1API keeps one instance per game session: a save without data must not inherit the last one's.
-    protected override void OnCreated() { Owned = new(); Effects.ApplyAll(); }
+    protected override void OnCreated() { Owned = new(); Ready = true; Effects.ApplyAll(); }
     protected override void OnLoaded()
     {
         Owned ??= new();
+        Ready = true;
         Effects.ApplyAll();
         Mod.Log($"loaded {Owned.Count} upgrade(s)");
     }

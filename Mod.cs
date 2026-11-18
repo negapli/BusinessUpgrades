@@ -18,8 +18,11 @@ public class Mod : MelonMod
 
     public override void OnInitializeMelon() => Log("loaded");
     public override void OnDeinitializeMelon() => Net.Shutdown();
+    // Leaving a save: nothing acts on the list until the next one has loaded.
+    public override void OnSceneWasUnloaded(int buildIndex, string sceneName) { if (sceneName == "Main") { Upgrades.Ready = false; loggedBuildings = false; } }
 
     float nextTick;
+    static bool loggedBuildings;
     public override void OnUpdate()
     {
         try
@@ -29,6 +32,7 @@ public class Mod : MelonMod
             if (UnityEngine.Time.time < nextTick) return;
             nextTick = UnityEngine.Time.time + 1f;
             Net.Tick();
+            if (Upgrades.Ready && !loggedBuildings) { loggedBuildings = true; Saul.LogNearbyBuildings(); } // dev
             Saul.Tick();
             Saul.KeepInPlace();
         }
