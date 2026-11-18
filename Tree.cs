@@ -50,6 +50,8 @@ public static class Trees
             }),
             new("Industrial", 75000, ERank.Block_Boss, new Request("50 Heavenly cocaine, Energizing and Long faced", 50, EDrugType.Cocaine, EQuality.Heavenly, new[] { "Energizing", "Long faced" }), new Node[]
             {
+                new("industrial", "Industrial machines", "Capacity +{cap}, laundering takes 8 h", 40000, Capacity: 3f, Minutes: 480),
+                new("offshore", "Offshore account", "Laundered money +10% more (on top of Cleaner books)", 50000, Payout: 0.1f),
                 new("wholesale", "Wholesale account", "120 Mouth Wash a day into your racks here (place more racks)", 30000, Supply: 120),
             }),
         },

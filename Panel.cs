@@ -95,7 +95,7 @@ public class Panel
         var v = rows.GetComponent<VerticalLayoutGroup>();
         v.childAlignment = TextAnchor.UpperLeft; v.childControlHeight = true; v.childForceExpandHeight = false; v.childControlWidth = true; v.childForceExpandWidth = true;
         var rowStyle = opList.transform.Find("BusinessLabel").gameObject; // grey column-header text: our row text style
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 3; i++) // most nodes in a tier (3 rows fit the box)
         {
             int k = i;
             var row = new GameObject("UpgradeRow");
