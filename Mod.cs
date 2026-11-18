@@ -33,7 +33,7 @@ static class LaunderingInterfaceInit
         var btn = Object.Instantiate(src.gameObject, src.transform.parent).GetComponent<Button>();
         btn.name = "BusinessUpgradesButton";
         var rt = btn.GetComponent<RectTransform>();
-        rt.anchoredPosition -= new Vector2(0, rt.rect.height * 1.2f);
+        rt.anchoredPosition += new Vector2(rt.rect.width * 1.1f, 0); // right of Launder (below it overlaps the operations panel)
         btn.onClick = new Button.ButtonClickedEvent(); // drop the cloned Launder listeners
         btn.onClick.AddListener((UnityAction)(() => Mod.Log($"Upgrades clicked: {bus.PropertyName}")));
         btn.interactable = true;
