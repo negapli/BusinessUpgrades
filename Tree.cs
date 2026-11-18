@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Il2CppScheduleOne.DevUtilities;
 using Il2CppScheduleOne.Levelling;
@@ -69,8 +70,39 @@ public static class Trees
         return null;
     }
 
-    public static void Own(string biz, string id) { Upgrades.Instance.Owned.Add(biz + ":" + id); Effects.ApplyAll(); }
-    public static void OwnTier(string biz, int i) => Own(biz, TierId(i));
+    public static string TierIdOf(int i) => TierId(i);
+
+    /// Host only: check, pay from the bank, own. The host's own clicks and clients' requests both come here.
+    /// Returns null when bought, else why not.
+    public static string TryBuy(string biz, string id)
+    {
+        if (!All.TryGetValue(biz ?? "", out var tiers)) return "unknown business";
+        if (Upgrades.Instance == null) return "No save loaded";
+        if (Upgrades.Has(biz, id)) return "Already owned";
+        string why, what; float cost;
+        int ti;
+        for (ti = 0; ti < tiers.Length && TierId(ti) != id; ti++) { }
+        if (ti < tiers.Length) { why = TierLock(biz, ti); cost = tiers[ti].Cost; what = $"Tier {ti + 1}: {tiers[ti].Name}"; }
+        else
+        {
+            Node node = null; int at = -1;
+            for (int i = 0; i < tiers.Length && node == null; i++) { node = Array.Find(tiers[i].Nodes, n => n.Id == id); at = i; }
+            if (node == null) return "unknown upgrade";
+            why = NodeLock(biz, at, node); cost = node.Cost; what = node.Name;
+        }
+        if (why != null) return why;
+        var money = NetworkSingleton<MoneyManager>.Instance;
+        // Paid from the (shared) bank, like property purchases: networked, and listed in the phone's banking app.
+        if (money.sync___get_value_onlineBalance() < cost) return "Not enough money in the bank";
+        string name = biz;
+        foreach (var b in Business.Businesses) if (b.PropertyCode == biz) name = b.PropertyName;
+        money.CreateOnlineTransaction($"{name} upgrade", -cost, 1f, what);
+        Upgrades.Instance.Owned.Add(biz + ":" + id);
+        Effects.ApplyAll();
+        Panel.RefreshOpen();
+        Mod.Log($"{biz}: bought {id} for {cost}");
+        return null;
+    }
 }
 
 // One per save file (S1API). Owned entries look like "laundromat:t1" / "laundromat:extra_drum".

@@ -17,6 +17,20 @@ public class Mod : MelonMod
     public static void Log(string msg) => Melon<Mod>.Logger.Msg(msg);
 
     public override void OnInitializeMelon() => Log("loaded");
+    public override void OnDeinitializeMelon() => Net.Shutdown();
+
+    float nextTick;
+    public override void OnUpdate()
+    {
+        try
+        {
+            Net.Update();
+            if (UnityEngine.Time.time < nextTick) return;
+            nextTick = UnityEngine.Time.time + 1f;
+            Net.Tick();
+        }
+        catch (System.Exception e) { Log($"update: {e.Message}"); }
+    }
 }
 
 // Each business's laundering computer: record its base capacity, apply upgrades, add the "Upgrades" button + panel.

@@ -7,6 +7,7 @@
     <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/Schedule I</GameDir>
     <CheckEolTargetFramework>false</CheckEolTargetFramework>
     <!-- Keep local folder names out of the built DLL (the debug-symbol path is stamped into it) -->
+    <SteamNetworkLibDll Condition="'$(SteamNetworkLibDll)' == ''">$(GameDir)/UserLibs/SteamNetworkLib-IL2Cpp.dll</SteamNetworkLibDll>
     <PathMap>$(MSBuildProjectDirectory)=BusinessUpgrades</PathMap>
   </PropertyGroup>
   <ItemGroup>
@@ -16,6 +17,8 @@
     <Reference Include="$(GameDir)/MelonLoader/net6/Newtonsoft.Json.dll" Private="false" />
     <Reference Include="$(GameDir)/MelonLoader/Il2CppAssemblies/*.dll" Private="false" />
     <Reference Include="$(GameDir)/Mods/S1API.Il2Cpp.MelonLoader.dll" Private="false" />
+    <!-- SteamNetworkLib (ifBars) Il2Cpp build, installed from Thunderstore into <game>/UserLibs -->
+    <Reference Include="$(SteamNetworkLibDll)" Private="false" />
   </ItemGroup>
   <Target Name="Deploy" AfterTargets="Build">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)/Mods" />

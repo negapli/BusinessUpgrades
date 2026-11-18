@@ -8,9 +8,10 @@ A Schedule I mod: upgrade your businesses through their laundering computer. Eac
 - Schedule I (main branch, IL2CPP)
 - [MelonLoader](https://github.com/LavaGang/MelonLoader) 0.7.x
 - [S1API](https://thunderstore.io/c/schedule-i/p/ifBars/S1API_Forked/) 3.2.3 (IL2CPP)
+- [SteamNetworkLib](https://thunderstore.io/c/schedule-i/p/ifBars/SteamNetworkLib_Il2Cpp/) 1.6.0 (co-op sync; every player installs it)
 
 ## Install
-1. Install MelonLoader and S1API.
+1. Install MelonLoader, S1API and SteamNetworkLib.
 2. Put `BusinessUpgrades.dll` in `Schedule I/Mods/`.
 
 ## Credits
